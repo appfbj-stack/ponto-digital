@@ -1,0 +1,686 @@
+// =====================================================================
+// KAIROS PONTO - Schema Prisma
+// =====================================================================
+// Multi-tenant SaaS. Toda entidade de negócio carrega tenantId.
+// Banco: PostgreSQL central existente no VPS.
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  VACATION
+  LEAVE
+}
+
+enum AttendanceType {
+  ENTRY
+  BREAK_START
+  BREAK_END
+  EXIT
+  OVERTIME
+}
+
+enum AttendanceStatus {
+  PENDING
+  VALIDATED
+  SYNCED
+  CORRECTED
+  CANCELLED
+  REJECTED
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ScheduleType {
+  FIVE_BY_TWO       // 5x2
+  SIX_BY_ONE        // 6x1
+  TWELVE_BY_THIRTY_SIX // 12x36
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  OVERDUE
+  CANCELLED
+  SUSPENDED
+}
+
+enum PlanTier {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  CREATE
+  UPDATE
+  DELETE
+  ATTENDANCE_REGISTER
+  ATTENDANCE_CORRECTION_REQUEST
+  ATTENDANCE_CORRECTION_APPROVE
+  ATTENDANCE_CORRECTION_REJECT
+  SCHEDULE_CHANGE
+  LOCATION_CHANGE
+  EMPLOYEE_CHANGE
+  SETTINGS_CHANGE
+  DEVICE_REVOKE
+  BIOMETRIC_REGISTER
+  BIOMETRIC_UPDATE
+  BIOMETRIC_DELETE
+  PLAN_CHANGE
+  TENANT_BLOCK
+  TENANT_UNBLOCK
+  TENANT_SUSPEND
+}
+
+enum NotificationType {
+  MISSED_PUNCH
+  LATE
+  CORRECTION_APPROVED
+  CORRECTION_REJECTED
+  BANK_HOURS_UPDATED
+  DEVICE_REVOKED
+  GENERIC
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ---------------------------------------------------------------------
+// 1. Tenants (empresas)
+// ---------------------------------------------------------------------
+
+model Tenant {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  cnpj        String?  @unique
+  logoUrl     String?
+  timezone    String   @default("America/Sao_Paulo")
+  active      Boolean  @default(true)
+  blockedAt   DateTime?
+  blockedReason String?
+
+  // Configurações
+  defaultRadiusMeters   Int     @default(150)
+  defaultToleranceMinutes Int   @default(10)
+  requireFacialValidation Boolean @default(true)
+  outOfRadiusBehavior    String  @default("BLOCK") // BLOCK | ALLOW_WITH_OCCURRENCE
+
+  // Plano
+  planId      String?
+  plan        Plan?    @relation(fields: [planId], references: [id])
+  subscription Subscription?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users           User[]
+  employees       Employee[]
+  departments     Department[]
+  workLocations   WorkLocation[]
+  workSchedules   WorkSchedule[]
+  scheduleAssignments ScheduleAssignment[]
+  attendanceRecords    AttendanceRecord[]
+  attendanceCorrections AttendanceCorrection[]
+  bankHours        BankHour[]
+  facialBiometrics FacialBiometric[]
+  devices          Device[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  licenses         License[]
+
+  @@index([slug])
+  @@index([active])
+}
+
+// ---------------------------------------------------------------------
+// 2. Plans (planos da plataforma)
+// ---------------------------------------------------------------------
+
+model Plan {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  tier          PlanTier
+  description   String?
+  priceMonthly  Decimal   @db.Decimal(10, 2)
+  priceYearly   Decimal?  @db.Decimal(10, 2)
+  maxEmployees  Int
+  maxLocations  Int
+  features      Json      @default("{}")
+  active        Boolean   @default(true)
+  trialDays     Int       @default(14)
+
+  // Asaas integration
+  asaasProductId String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenants       Tenant[]
+  subscriptions Subscription[]
+
+  @@unique([tier, name])
+  @@index([active])
+}
+
+// ---------------------------------------------------------------------
+// 3. Subscriptions
+// ---------------------------------------------------------------------
+
+model Subscription {
+  id              String             @id @default(uuid()) @db.Uuid
+  tenantId        String             @unique @db.Uuid
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId          String             @db.Uuid
+  plan            Plan               @relation(fields: [planId], references: [id])
+  status          SubscriptionStatus @default(TRIAL)
+  trialEndsAt     DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelledAt     DateTime?
+
+  // Asaas
+  asaasCustomerId String?
+  asaasSubscriptionId String?
+  asaasPaymentId  String?
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+// ---------------------------------------------------------------------
+// 4. Licenses (controle granular de uso)
+// ---------------------------------------------------------------------
+
+model License {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  feature     String   // ex: "facial_recognition", "offline_mode", "reports_pdf"
+  enabled     Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, feature])
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------
+// 5. Users (usuários do sistema — autenticação)
+// ---------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String
+  passwordHash  String
+  role          UserRole
+  active        Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  lastLoginAt   DateTime?
+
+  // Tenant (null apenas para SUPER_ADMIN)
+  tenantId      String?   @db.Uuid
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Refresh tokens
+  refreshTokens RefreshToken[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Funcionário vinculado (1:1, opcional)
+  employee      Employee?
+
+  @@unique([email])
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([role])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  replacedBy  String?  @db.Uuid
+  userAgent   String?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+// ---------------------------------------------------------------------
+// 6. Employees (funcionários)
+// ---------------------------------------------------------------------
+
+model Employee {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @db.Uuid
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId          String?        @unique @db.Uuid
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Dados pessoais
+  name            String
+  cpf             String
+  email           String
+  phone           String?
+  registration    String?        // matrícula
+  position        String?        // cargo
+  photoUrl        String?
+
+  // Vínculos
+  departmentId    String?        @db.Uuid
+  department      Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  scheduleId      String?        @db.Uuid
+  schedule        WorkSchedule?  @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  // Status
+  status          EmployeeStatus @default(ACTIVE)
+  admissionDate   DateTime?
+  terminationDate DateTime?
+
+  // Relations
+  locations              EmployeeLocation[]
+  attendanceRecords      AttendanceRecord[]
+  attendanceCorrections  AttendanceCorrection[]
+  bankHours              BankHour?
+  facialBiometric        FacialBiometric?
+  devices                Device[]
+  notifications          Notification[]
+  scheduleAssignments    ScheduleAssignment[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([tenantId, cpf])
+  @@unique([tenantId, email])
+  @@unique([tenantId, registration])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([departmentId])
+}
+
+// ---------------------------------------------------------------------
+// 7. Departments
+// ---------------------------------------------------------------------
+
+model Department {
+  id          String     @id @default(uuid()) @db.Uuid
+  tenantId    String     @db.Uuid
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  active      Boolean    @default(true)
+  employees   Employee[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------
+// 8. Work Locations (geocerca)
+// ---------------------------------------------------------------------
+
+model WorkLocation {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  address       String?
+  latitude      Decimal  @db.Decimal(10, 7)
+  longitude     Decimal  @db.Decimal(10, 7)
+  radiusMeters  Int      @default(150)
+  active        Boolean  @default(true)
+
+  employees     EmployeeLocation[]
+  attendanceRecords AttendanceRecord[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([active])
+}
+
+model EmployeeLocation {
+  id          String       @id @default(uuid()) @db.Uuid
+  employeeId  String       @db.Uuid
+  employee    Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  locationId  String       @db.Uuid
+  location    WorkLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+
+  @@unique([employeeId, locationId])
+  @@index([employeeId])
+  @@index([locationId])
+}
+
+// ---------------------------------------------------------------------
+// 9. Work Schedules (jornadas)
+// ---------------------------------------------------------------------
+
+model WorkSchedule {
+  id            String      @id @default(uuid()) @db.Uuid
+  tenantId      String      @db.Uuid
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  scheduleType  ScheduleType @default(FIVE_BY_TWO)
+  description   String?
+
+  // Tolerância
+  entryToleranceMinutes  Int @default(10)
+  exitToleranceMinutes   Int @default(10)
+
+  // Dias da semana e horários (JSON: { monday: { entry: "08:00", breakStart: "12:00", breakEnd: "13:00", exit: "17:00" }, ... })
+  weeklyHours   Json        @default("{}")
+
+  // Para 12x36 ou personalizada, pode ter rotação
+  rotationStart DateTime?
+  rotationDays  Int?
+
+  active        Boolean     @default(true)
+  employees     Employee[]
+  assignments   ScheduleAssignment[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model ScheduleAssignment {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenantId    String      @db.Uuid
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId  String      @db.Uuid
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  scheduleId  String      @db.Uuid
+  schedule    WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([tenantId, employeeId])
+  @@index([scheduleId])
+}
+
+// ---------------------------------------------------------------------
+// 10. Attendance Records (registros de ponto)
+// ---------------------------------------------------------------------
+
+model AttendanceRecord {
+  id            String           @id @default(uuid()) @db.Uuid
+  tenantId      String           @db.Uuid
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId    String           @db.Uuid
+  employee      Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  type          AttendanceType
+  status        AttendanceStatus @default(SYNCED)
+
+  // Timestamp do servidor (autoritativo)
+  timestamp     DateTime
+  // Timestamp do client (informativo, pode ser diferente)
+  clientTimestamp DateTime?
+
+  // Geolocalização
+  latitude      Decimal?         @db.Decimal(10, 7)
+  longitude     Decimal?         @db.Decimal(10, 7)
+  accuracy      Float?
+  locationId    String?          @db.Uuid
+  location      WorkLocation?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  inGeofence    Boolean          @default(false)
+  geofenceDistanceMeters Float?
+
+  // Reconhecimento facial
+  faceValidated       Boolean @default(false)
+  faceConfidence      Float?
+  faceLivenessPassed  Boolean @default(false)
+  faceValidationLog   Json?   // metadados da validação (sem imagem)
+
+  // Dispositivo e origem
+  deviceId      String?          @db.Uuid
+  device        Device?          @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  ip            String?
+  userAgent     String?
+
+  // Idempotência e offline
+  clientEventId String?          @unique
+  source        String           @default("ONLINE") // ONLINE | OFFLINE_SYNC
+
+  // Correções
+  correctedFromId String?        @db.Uuid
+  correctedFrom   AttendanceRecord? @relation("AttendanceCorrections", fields: [correctedFromId], references: [id], onDelete: SetNull)
+  correctedTo     AttendanceRecord[] @relation("AttendanceCorrections")
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([tenantId, employeeId, timestamp])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, type, timestamp])
+  @@index([clientEventId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------
+// 11. Attendance Corrections
+// ---------------------------------------------------------------------
+
+model AttendanceCorrection {
+  id            String          @id @default(uuid()) @db.Uuid
+  tenantId      String          @db.Uuid
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId    String          @db.Uuid
+  employee      Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  date          DateTime
+  type          AttendanceType
+  requestedTime DateTime
+  reason        String
+  status        CorrectionStatus @default(PENDING)
+
+  // Resolução
+  reviewedBy    String?         @db.Uuid
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  appliedRecordId String?       @db.Uuid
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([tenantId, status])
+  @@index([employeeId, status])
+}
+
+// ---------------------------------------------------------------------
+// 12. Bank Hours
+// ---------------------------------------------------------------------
+
+model BankHour {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId    String   @unique @db.Uuid
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Saldo em minutos (positivo = crédito, negativo = débito)
+  balanceMinutes Int     @default(0)
+  lastCalculatedAt DateTime?
+
+  // Histórico (opcional, gerenciado via audit)
+  history       Json     @default("[]")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------
+// 13. Facial Biometrics (dados protegidos)
+// ---------------------------------------------------------------------
+
+model FacialBiometric {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId    String   @unique @db.Uuid
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Embedding criptografada (AES-256-GCM, base64)
+  encryptedEmbedding String  @db.Text
+  // Provider usado
+  provider      String   @default("face-api-js")
+  // Versão do modelo
+  modelVersion  String?
+
+  // Metadados sem dados sensíveis
+  quality       Float?
+  samplesCount  Int      @default(1)
+
+  registeredAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime?
+
+  @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------
+// 14. Devices
+// ---------------------------------------------------------------------
+
+model Device {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId    String    @db.Uuid
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  deviceId      String    // ID gerado pelo app (fingerprint)
+  deviceName    String?
+  platform      String?   // "android" | "ios" | "web"
+  appVersion    String?
+  userAgent     String?
+
+  active        Boolean   @default(true)
+  lastSeenAt    DateTime?
+  revokedAt     DateTime?
+  revokedReason String?
+
+  attendanceRecords AttendanceRecord[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([employeeId, deviceId])
+  @@index([tenantId])
+  @@index([active])
+}
+
+// ---------------------------------------------------------------------
+// 15. Notifications
+// ---------------------------------------------------------------------
+
+model Notification {
+  id            String           @id @default(uuid()) @db.Uuid
+  tenantId      String           @db.Uuid
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId    String?          @db.Uuid
+  employee      Employee?        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  type          NotificationType
+  title         String
+  body          String
+  data          Json             @default("{}")
+  read          Boolean          @default(false)
+  readAt        DateTime?
+
+  // Canais
+  sentEmail     Boolean          @default(false)
+  sentPush      Boolean          @default(false)
+  sentAt        DateTime?
+
+  createdAt     DateTime         @default(now())
+
+  @@index([tenantId, employeeId, read])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------
+// 16. Audit Logs
+// ---------------------------------------------------------------------
+
+model AuditLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenantId    String?     @db.Uuid // null apenas para ações do SUPER_ADMIN
+  tenant      Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId      String?     @db.Uuid
+  action      AuditAction
+  entity      String      // nome da entidade
+  entityId    String?
+
+  oldValue    Json?
+  newValue    Json?
+
+  ip          String?
+  userAgent   String?
+
+  createdAt   DateTime    @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@index([action])
+}

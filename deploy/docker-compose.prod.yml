@@ -1,0 +1,153 @@
+# ===================================================================
+# KAIROS PONTO — docker-compose para PRODUÇÃO (VPS + Traefik + Cloudflare)
+# ===================================================================
+# Pré-requisitos:
+#   1. PostgreSQL já rodando (container chamado "postgres" na rede "traefik_default")
+#   2. Traefik rodando com Cloudflare DNS challenge configurado
+#   3. DNS apontando (laranja no Cloudflare) para o IP do VPS:
+#      api.kairosponto.com.br
+#      app.kairosponto.com.br
+#      ponto.kairosponto.com.br
+#      super.kairosponto.com.br
+#   4. Database "kairos_ponto" criado (ver setup-vps.sh)
+#   5. .env.production preenchido (gerar secrets com openssl)
+#
+# Subir:   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+# Derrubar: docker compose -f docker-compose.prod.yml down
+# Logs:    docker compose -f docker-compose.prod.yml logs -f
+# ===================================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # BACKEND — NestJS API
+  # ----------------------------------------------------------
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+    container_name: kairos-api
+    restart: unless-stopped
+    expose:
+      - "3001"
+    env_file:
+      - .env.production
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+    networks:
+      - traefik_default
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.kairos-api.rule=Host(`api.kairosponto.com.br`)"
+      - "traefik.http.routers.kairos-api.entrypoints=websecure"
+      - "traefik.http.routers.kairos-api.tls.certresolver=cloudflare"
+      - "traefik.http.routers.kairos-api.tls=true"
+      - "traefik.http.services.kairos-api.loadbalancer.server.port=3001"
+      - "traefik.http.middlewares.kairos-api-cors.headers.customresponseheaders.Access-Control-Allow-Origin=*"
+      - "traefik.http.middlewares.kairos-api-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.kairos-api-rate.ratelimit.burst=50"
+      - "traefik.http.routers.kairos-api.middlewares=kairos-api-rate"
+
+  # ----------------------------------------------------------
+  # ADMIN WEB (gestores da empresa)
+  # ----------------------------------------------------------
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+    container_name: kairos-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env.production
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.kairosponto.com.br
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    networks:
+      - traefik_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.kairos-web.rule=Host(`app.kairosponto.com.br`)"
+      - "traefik.http.routers.kairos-web.entrypoints=websecure"
+      - "traefik.http.routers.kairos-web.tls.certresolver=cloudflare"
+      - "traefik.http.services.kairos-web.loadbalancer.server.port=3000"
+
+  # ----------------------------------------------------------
+  # PWA FUNCIONÁRIO
+  # ----------------------------------------------------------
+  employee:
+    build:
+      context: ..
+      dockerfile: docker/employee.Dockerfile
+    container_name: kairos-employee
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env.production
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.kairosponto.com.br
+      - NEXT_PUBLIC_EMPLOYEE_API_URL=https://api.kairosponto.com.br
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    networks:
+      - traefik_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.kairos-employee.rule=Host(`ponto.kairosponto.com.br`)"
+      - "traefik.http.routers.kairos-employee.entrypoints=websecure"
+      - "traefik.http.routers.kairos-employee.tls.certresolver=cloudflare"
+      - "traefik.http.services.kairos-employee.loadbalancer.server.port=3000"
+
+  # ----------------------------------------------------------
+  # SUPER ADMIN (plataforma)
+  # ----------------------------------------------------------
+  super-admin:
+    build:
+      context: ..
+      dockerfile: docker/super-admin.Dockerfile
+    container_name: kairos-super-admin
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env.production
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.kairosponto.com.br
+      - NEXT_PUBLIC_SUPER_ADMIN_API_URL=https://api.kairosponto.com.br
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    networks:
+      - traefik_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.kairos-super-admin.rule=Host(`super.kairosponto.com.br`)"
+      - "traefik.http.routers.kairos-super-admin.entrypoints=websecure"
+      - "traefik.http.routers.kairos-super-admin.tls.certresolver=cloudflare"
+      - "traefik.http.services.kairos-super-admin.loadbalancer.server.port=3000"
+
+networks:
+  traefik_default:
+    external: true
+    name: traefik_default
+  internal:
+    driver: bridge

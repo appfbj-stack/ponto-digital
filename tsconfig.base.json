@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "baseUrl": ".",
+    "paths": {
+      "@kairos/database": ["./packages/database/src/index.ts"],
+      "@kairos/database/*": ["./packages/database/src/*"],
+      "@kairos/billing": ["./packages/billing/src/index.ts"],
+      "@kairos/billing/*": ["./packages/billing/src/*"],
+      "@kairos/face": ["./packages/face/src/index.ts"],
+      "@kairos/face/*": ["./packages/face/src/*"],
+      "@kairos/ui": ["./packages/ui/src/index.ts"],
+      "@kairos/ui/*": ["./packages/ui/src/*"],
+      "@kairos/types": ["./packages/types/src/index.ts"],
+      "@kairos/types/*": ["./packages/types/src/*"],
+      "@kairos/timesheet": ["./packages/timesheet/src/index.ts"],
+      "@kairos/timesheet/*": ["./packages/timesheet/src/*"],
+      "@kairos/config": ["./packages/config/src/index.ts"],
+      "@kairos/config/*": ["./packages/config/src/*"],
+      "@kairos/utils": ["./packages/utils/src/index.ts"],
+      "@kairos/utils/*": ["./packages/utils/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", "build"]
+}

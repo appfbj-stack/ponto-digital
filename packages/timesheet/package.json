@@ -1,0 +1,20 @@
+{
+  "name": "@kairos/timesheet",
+  "version": "0.1.0",
+  "description": "Motor de cálculo de horas trabalhadas, extras, atrasos e banco de horas",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "echo 'no lint'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@kairos/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}
