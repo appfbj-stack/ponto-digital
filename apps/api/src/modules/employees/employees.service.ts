@@ -7,7 +7,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto, UpdateEmployeeStatusDto } from './dto/employee.dto';
-import { AuditAction, EmployeeStatus, UserRole } from '@prisma/client';
+import { AuditAction, EmployeeStatus, UserRole, Prisma } from '@prisma/client';
 
 @Injectable()
 export class EmployeesService {
@@ -213,13 +213,13 @@ export class EmployeesService {
     return updated;
   }
 
-  private diff<T extends Record<string, unknown>>(a: T, b: T): Record<string, { from: unknown; to: unknown }> {
+  private diff<T extends Record<string, unknown>>(a: T, b: T): Prisma.InputJsonValue {
     const out: Record<string, { from: unknown; to: unknown }> = {};
     for (const key of Object.keys(b)) {
       if (JSON.stringify(a[key]) !== JSON.stringify(b[key])) {
         out[key] = { from: a[key], to: b[key] };
       }
     }
-    return out;
+    return out as Prisma.InputJsonValue;
   }
 }

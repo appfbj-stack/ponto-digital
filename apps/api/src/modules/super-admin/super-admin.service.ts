@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingService } from '../billing/billing.service';
-import { TenantStatus, AuditAction, SubscriptionStatus, PlanTier } from '@prisma/client';
+import { AuditAction, SubscriptionStatus, PlanTier } from '@prisma/client';
 
 @Injectable()
 export class SuperAdminService {
@@ -156,7 +156,7 @@ export class SuperAdminService {
 
       await tx.user.update({
         where: { id: adminUser.id },
-        data: { employeeId: employee.id },
+        data: { employee: { connect: { id: employee.id } } },
       });
 
       // Audit

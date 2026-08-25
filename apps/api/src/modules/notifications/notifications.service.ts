@@ -14,7 +14,7 @@ export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
   private transporter: nodemailer.Transporter | null = null;
   private emailEnabled = false;
-  private fromAddress: string;
+  private fromAddress: string = '';
 
   constructor(
     private readonly prisma: PrismaService,

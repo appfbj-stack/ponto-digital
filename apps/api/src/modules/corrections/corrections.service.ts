@@ -58,13 +58,14 @@ export class CorrectionsService {
     dto: ReviewCorrectionDto,
     actorUserId: string,
   ) {
-    const existing = await this.prisma.attendanceCorrection.findFirst({
+    const foundExisting = await this.prisma.attendanceCorrection.findFirst({
       where: { id, tenantId },
     });
-    if (!existing) throw new NotFoundException('Solicitação não encontrada');
-    if (existing.status !== CorrectionStatus.PENDING) {
+    if (!foundExisting) throw new NotFoundException('Solicitação não encontrada');
+    if (foundExisting.status !== CorrectionStatus.PENDING) {
       throw new BadRequestException('Solicitação já foi revisada');
     }
+    const existing: NonNullable<typeof foundExisting> = foundExisting;
 
     return this.prisma.$transaction(async (tx) => {
       const reviewed = await tx.attendanceCorrection.update({
@@ -119,16 +120,20 @@ export class CorrectionsService {
     });
 
     // Recalcula bank hours se aprovado (background)
-    if (dto.status === 'APPROVED') {
-      this.timesheet.recalculateBankHours(tenantId, existing.employeeId).catch((err) => {
+    if (dto.status === 'APPROVED' && existing) {
+      const employeeId: string = existing.employeeId;
+      this.timesheet.recalculateBankHours(tenantId, employeeId).catch((err: unknown) => {
         this.logger.error(`Erro ao recalcular bank hours após correção: ${err}`);
       });
     }
 
     // Notifica o funcionário
-    this.notifications
-      .correctionResult(existing.employeeId, dto.status as 'APPROVED' | 'REJECTED', dto.reviewNotes)
-      .catch((err) => this.logger.error(`Erro ao notificar correção: ${err}`));
+    if (existing) {
+      const employeeId: string = existing.employeeId;
+      this.notifications
+        .correctionResult(employeeId, dto.status as 'APPROVED' | 'REJECTED', dto.reviewNotes)
+        .catch((err: unknown) => this.logger.error(`Erro ao notificar correção: ${err}`));
+    }
 
     return this.prisma.attendanceCorrection.findUnique({ where: { id } });
   }

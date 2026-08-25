@@ -3,12 +3,12 @@
  * Começamos com Asaas (Brasil), estrutura permite trocar.
  */
 
-export type BillingProvider = 'asaas' | 'stripe' | 'mock';
+export type BillingProviderName = 'asaas' | 'stripe' | 'mock';
 
 export type BillingEnvironment = 'sandbox' | 'production';
 
 export interface BillingConfig {
-  provider: BillingProvider;
+  provider: BillingProviderName;
   environment: BillingEnvironment;
   apiKey: string;
   webhookSecret?: string;

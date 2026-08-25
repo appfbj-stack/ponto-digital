@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as PDFDocument from 'pdfkit';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PDFDocument = require('pdfkit');
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { format } from 'date-fns';
@@ -61,7 +62,7 @@ export class ExportsService {
       try {
         const doc = new PDFDocument({ size: 'A4', margin: 40 });
         const chunks: Buffer[] = [];
-        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
 
@@ -307,7 +308,7 @@ export class ExportsService {
       }
     });
 
-    return (await workbook.xlsx.writeBuffer()) as Buffer;
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
 
   /**
@@ -380,7 +381,7 @@ export class ExportsService {
       }
     });
 
-    return (await workbook.xlsx.writeBuffer()) as Buffer;
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
 
   // --- helpers ---

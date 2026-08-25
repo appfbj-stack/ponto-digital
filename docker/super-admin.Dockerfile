@@ -37,12 +37,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/.next ./apps/super-admin/.next
-COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/public ./apps/super-admin/public
-COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/package.json ./apps/super-admin/package.json
-COPY --from=build --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=build --chown=nextjs:nodejs /app/packages ./packages
-COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/next.config.js ./apps/super-admin/
+# Standalone build output
+COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/.next/standalone /app
+COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/.next/static /app/apps/super-admin/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/public /app/apps/super-admin/public
 
 USER nextjs
 EXPOSE 3000
@@ -51,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --quiet --spider http://localhost:3000/ || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "cd apps/super-admin && node node_modules/next/dist/bin/next start -p 3000"]
+CMD ["sh", "-c", "node apps/super-admin/server.js"]

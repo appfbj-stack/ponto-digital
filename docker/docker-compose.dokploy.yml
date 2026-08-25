@@ -1,0 +1,121 @@
+# ===================================================================
+# KAIROS PONTO — docker-compose para DOKPLOY (VPS 187.77.229.227)
+# ===================================================================
+# Sem Traefik — Dokploy/Caddy cuida do proxy reverso
+# Banco centralizado: kairos-shared-pg
+# Subdomínios em *.pontofacial.fbautomacao.space
+# ===================================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # BACKEND — NestJS API
+  # ----------------------------------------------------------
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+    image: kairos-ponto-api:latest
+    container_name: kairos-ponto-api
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://kairos_user:${POSTGRES_PASSWORD}@kairos-shared-pg:5432/kairos_ponto_db
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - CORS_ORIGINS=https://app.pontofacial.fbautomacao.space,https://ponto.pontofacial.fbautomacao.space,https://super.pontofacial.fbautomacao.space
+      - API_URL=https://api.pontofacial.fbautomacao.space
+      - FACE_PROVIDER=face-api-js
+      - FACE_SIMILARITY_THRESHOLD=0.6
+      - BIOMETRIC_ENCRYPTION_KEY=${BIOMETRIC_ENCRYPTION_KEY}
+      - BILLING_PROVIDER=mock
+      - RATE_LIMIT_TTL=60
+      - RATE_LIMIT_MAX=100
+      - LOG_LEVEL=info
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # ----------------------------------------------------------
+  # ADMIN WEB (gestores da empresa)
+  # ----------------------------------------------------------
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+    image: kairos-ponto-web:latest
+    container_name: kairos-ponto-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=https://api.pontofacial.fbautomacao.space
+      - NEXT_PUBLIC_APP_NAME=Kairos Ponto
+    depends_on:
+      - api
+    networks:
+      - dokploy-network
+
+  # ----------------------------------------------------------
+  # PWA FUNCIONÁRIO
+  # ----------------------------------------------------------
+  employee:
+    build:
+      context: ..
+      dockerfile: docker/employee.Dockerfile
+    image: kairos-ponto-employee:latest
+    container_name: kairos-ponto-employee
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=https://api.pontofacial.fbautomacao.space
+      - NEXT_PUBLIC_EMPLOYEE_API_URL=https://api.pontofacial.fbautomacao.space
+    depends_on:
+      - api
+    networks:
+      - dokploy-network
+
+  # ----------------------------------------------------------
+  # SUPER ADMIN (plataforma)
+  # ----------------------------------------------------------
+  super-admin:
+    build:
+      context: ..
+      dockerfile: docker/super-admin.Dockerfile
+    image: kairos-ponto-super-admin:latest
+    container_name: kairos-ponto-super-admin
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=https://api.pontofacial.fbautomacao.space
+      - NEXT_PUBLIC_SUPER_ADMIN_API_URL=https://api.pontofacial.fbautomacao.space
+    depends_on:
+      - api
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
+    name: dokploy-network

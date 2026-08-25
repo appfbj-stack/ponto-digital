@@ -226,7 +226,7 @@ export class BiometricService implements OnModuleInit {
       matched: result.matched,
       distance: result.distance,
       confidence: result.confidence,
-      threshold: this.provider['threshold'] ?? 0.6,
+      threshold: (this.provider as { threshold?: number })['threshold'] ?? 0.6,
     };
   }
 

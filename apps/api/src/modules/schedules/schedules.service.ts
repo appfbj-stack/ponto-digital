@@ -92,7 +92,7 @@ export class SchedulesService {
     exit?: string;
   } | null> {
     const schedule = await this.findById(tenantId, scheduleId);
-    const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+    const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()] ?? 'sunday';
     const week = schedule.weeklyHours as Record<string, any>;
     return week?.[dayKey] || null;
   }

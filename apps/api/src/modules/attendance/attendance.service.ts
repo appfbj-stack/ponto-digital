@@ -244,11 +244,11 @@ export class AttendanceService {
     const assignment = await this.prisma.scheduleAssignment.findFirst({
       where: {
         employeeId,
-        effectiveFrom: { lte: now },
-        OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
+        startDate: { lte: now },
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
       include: { schedule: true },
-      orderBy: { effectiveFrom: 'desc' },
+      orderBy: { startDate: 'desc' },
     });
 
     if (!assignment) return;
@@ -265,13 +265,14 @@ export class AttendanceService {
 
     // weeklyHours é JSON: { monday: { entry: "08:00", exit: "17:00", breakStart, breakEnd }, ... }
     const weekdayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const weekday = weekdayKeys[now.getDay()];
+    const weekday = weekdayKeys[now.getDay()] ?? 'sunday';
 
     const weeklyHours = (assignment.schedule.weeklyHours as Record<string, any>) || {};
     const day = weeklyHours[weekday];
     if (!day || !day.entry) return;
 
     const [hh, mm] = day.entry.split(':').map(Number);
+    if (hh === undefined || mm === undefined) return;
     const expected = new Date(now);
     expected.setHours(hh, mm, 0, 0);
 

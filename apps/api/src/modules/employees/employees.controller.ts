@@ -18,7 +18,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { EmployeeStatus, JwtPayload } from '@kairos/types';
+import { JwtPayload } from '@kairos/types';
+import { EmployeeStatus } from '@prisma/client';
 
 @ApiTags('employees')
 @ApiBearerAuth()

@@ -37,12 +37,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-COPY --from=build --chown=nextjs:nodejs /app/apps/employee/.next ./apps/employee/.next
-COPY --from=build --chown=nextjs:nodejs /app/apps/employee/public ./apps/employee/public
-COPY --from=build --chown=nextjs:nodejs /app/apps/employee/package.json ./apps/employee/package.json
-COPY --from=build --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=build --chown=nextjs:nodejs /app/packages ./packages
-COPY --from=build --chown=nextjs:nodejs /app/apps/employee/next.config.js ./apps/employee/
+# Standalone build output
+COPY --from=build --chown=nextjs:nodejs /app/apps/employee/.next/standalone /app
+COPY --from=build --chown=nextjs:nodejs /app/apps/employee/.next/static /app/apps/employee/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/apps/employee/public /app/apps/employee/public
 
 USER nextjs
 EXPOSE 3000
@@ -51,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --quiet --spider http://localhost:3000/manifest.json || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "cd apps/employee && node node_modules/next/dist/bin/next start -p 3000"]
+CMD ["sh", "-c", "node apps/employee/server.js"]
