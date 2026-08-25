@@ -24,8 +24,10 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
-# Gera Prisma Client
-RUN pnpm --filter @kairos/database generate
+# Gera Prisma Client (com schema explícito)
+WORKDIR /app/packages/database
+RUN npx prisma generate --schema=./prisma/schema.prisma
+WORKDIR /app
 
 # Build NestJS
 RUN pnpm --filter @kairos/api build
