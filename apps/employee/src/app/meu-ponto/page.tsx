@@ -64,9 +64,9 @@ export default function MeuPontoPage() {
     byDay.get(day)!.push(r);
   }
   const days = Array.from(byDay.entries()).sort((a, b) => {
-    const [ad, am, ay] = a[0].split('/').map(Number);
-    const [bd, bm, by] = b[0].split('/').map(Number);
-    return new Date(by, bm - 1, bd).getTime() - new Date(ay, am - 1, ad).getTime();
+    const [ad, am, ay] = (a[0] ?? '').split('/').map(Number);
+    const [bd, bm, by] = (b[0] ?? '').split('/').map(Number);
+    return new Date(by ?? 0, (bm ?? 1) - 1, bd ?? 0).getTime() - new Date(ay ?? 0, (am ?? 1) - 1, ad ?? 0).getTime();
   });
 
   return (
