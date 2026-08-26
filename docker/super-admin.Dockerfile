@@ -24,6 +24,7 @@ COPY packages ./packages
 COPY apps/super-admin ./apps/super-admin
 COPY tsconfig.base.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PATH=/app/node_modules/.bin:$PATH
 RUN pnpm --filter @kairos/super-admin build
 
 # ---------- Stage 3: runtime ----------

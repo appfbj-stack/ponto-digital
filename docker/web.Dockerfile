@@ -24,6 +24,7 @@ COPY packages ./packages
 COPY apps/web ./apps/web
 COPY tsconfig.base.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PATH=/app/node_modules/.bin:$PATH
 RUN pnpm --filter @kairos/web build
 
 # ---------- Stage 3: runtime ----------
