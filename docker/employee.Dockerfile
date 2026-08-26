@@ -25,7 +25,7 @@ COPY apps/employee ./apps/employee
 COPY tsconfig.base.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PATH=/app/node_modules/.bin:$PATH
-RUN pnpm --filter @kairos/employee build
+RUN cd /app/apps/employee && pnpm exec next build
 
 # ---------- Stage 3: runtime ----------
 FROM node:20-alpine AS runtime

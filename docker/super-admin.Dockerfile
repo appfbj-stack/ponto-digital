@@ -25,7 +25,7 @@ COPY apps/super-admin ./apps/super-admin
 COPY tsconfig.base.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PATH=/app/node_modules/.bin:$PATH
-RUN pnpm --filter @kairos/super-admin build
+RUN cd /app/apps/super-admin && pnpm exec next build
 
 # ---------- Stage 3: runtime ----------
 FROM node:20-alpine AS runtime
