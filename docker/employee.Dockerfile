@@ -14,7 +14,7 @@ COPY packages ./packages
 COPY apps/web/package.json ./apps/web/
 COPY apps/employee/package.json ./apps/employee/
 COPY apps/super-admin/package.json ./apps/super-admin/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter @kairos/employee...
 
 # ---------- Stage 2: build ----------
 FROM base AS build
