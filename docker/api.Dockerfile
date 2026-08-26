@@ -7,7 +7,7 @@
 # ---------- Stage 1: deps ----------
 FROM node:20-alpine AS deps
 RUN apk add --no-cache openssl
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
 COPY packages ./packages

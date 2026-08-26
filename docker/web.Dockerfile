@@ -4,7 +4,7 @@
 # ===================================================================
 
 FROM node:20-alpine AS base
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 
 # ---------- Stage 1: deps ----------
