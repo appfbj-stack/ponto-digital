@@ -27,8 +27,8 @@ export async function loadFaceApi(): Promise<FaceApiModule> {
 
   loadPromise = (async () => {
     // Import dinâmico (não inclui no bundle principal)
-    const mod = await import('face-api.js');
-    faceapi = mod.default || mod;
+    const mod: any = await import('face-api.js');
+    faceapi = (mod.default ?? mod) as FaceApiModule;
 
     // Carrega modelos em paralelo
     await Promise.all(

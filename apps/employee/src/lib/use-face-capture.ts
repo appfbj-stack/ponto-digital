@@ -210,7 +210,7 @@ export function useFaceCapture(
         if (movementScore < 0.3) {
           setInstruction('Mova levemente a cabeça de um lado pro outro');
         } else {
-          setInstruction(`Continue... ${Math.round((lapsed / livenessProgress.targetMs) * 100)}%`);
+          setInstruction(`Continue... ${Math.round((elapsed / (livenessProgress.targetMs || 1)) * 100)}%`);
         }
       } else {
         setInstruction('✓ Pronto para capturar');

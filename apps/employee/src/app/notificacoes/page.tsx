@@ -56,7 +56,7 @@ export default function NotificacoesPage() {
   useEffect(() => {
     const token = localStorage.getItem('kairos_access_token');
     if (!token) { router.push('/login'); return; }
-    load(token);
+    load();
   }, [router, load]);
 
   async function markRead(id: string) {
@@ -67,7 +67,7 @@ export default function NotificacoesPage() {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
-      load(token);
+      load();
     } catch {}
   }
 
@@ -79,7 +79,7 @@ export default function NotificacoesPage() {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
-      load(token);
+      load();
     } catch {}
   }
 
