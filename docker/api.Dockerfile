@@ -15,7 +15,7 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY apps/employee/package.json ./apps/employee/
 COPY apps/super-admin/package.json ./apps/super-admin/
-RUN pnpm install --frozen-lockfile --filter @kairos/api... --filter @kairos/database
+RUN pnpm install --frozen-lockfile
 
 # ---------- Stage 2: build ----------
 FROM deps AS build
@@ -24,18 +24,12 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
-# Gera Prisma Client (com schema explícito)
+# Gera Prisma Client no path certo (sem --prod depois, que apaga)
 RUN npx prisma@5.22.0 generate --schema=./packages/database/prisma/schema.prisma
-# Garante que o .prisma esteja em /app/node_modules/.prisma (local usado pelo @prisma/client)
-RUN mkdir -p /app/node_modules/.prisma && cp -r /app/packages/database/node_modules/.prisma/* /app/node_modules/.prisma/ 2>/dev/null || true
-# Mostra onde o .prisma foi gerado para debug
-RUN find /app -name ".prisma" -type d 2>/dev/null | head -5
 
 # Build NestJS
+ENV PATH=/app/node_modules/.bin:$PATH
 RUN pnpm --filter @kairos/api build
-
-# Remove devDependencies pra reduzir tamanho
-RUN pnpm install --frozen-lockfile --filter @kairos/api... --filter @kairos/database --prod
 
 # ---------- Stage 3: runtime ----------
 FROM node:20-alpine AS runtime
