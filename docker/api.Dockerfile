@@ -24,10 +24,8 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
-# Gera Prisma Client (com schema explícito)
-WORKDIR /app/packages/database
-RUN npx prisma@5.22.0 generate --schema=./prisma/schema.prisma
-WORKDIR /app
+# Gera Prisma Client (com schema explícito, output em /app/node_modules/.prisma)
+RUN npx prisma@5.22.0 generate --schema=./packages/database/prisma/schema.prisma
 
 # Build NestJS
 RUN pnpm --filter @kairos/api build
@@ -47,7 +45,7 @@ COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /out/dist ./dist
 COPY --from=build /out/package.json ./
 # Copia .prisma/client gerado pelo `prisma generate` (pnpm deploy nao copia)
-COPY --from=build /app/packages/database/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 # Cria usuário não-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
