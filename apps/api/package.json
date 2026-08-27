@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Kairos Ponto - API (NestJS)",
   "scripts": {
-    "build": "nest build",
+    "prebuild": "node -e \"require('fs').rmSync('tsconfig.tsbuildinfo', {force:true}); require('fs').rmSync('dist', {recursive:true, force:true})\"",
+    "build": "tsc --build --force",
     "dev": "nest start --watch",
     "start": "node dist/main",
     "lint": "eslint \"src/**/*.ts\"",
