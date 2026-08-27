@@ -35,11 +35,7 @@ RUN find /app -name ".prisma" -type d 2>/dev/null | head -5
 RUN pnpm --filter @kairos/api build
 
 # Remove devDependencies pra reduzir tamanho
-RUN pnpm deploy --filter @kairos/api --prod /out
-# Regenera o Prisma Client DENTRO do /out (o pnpm deploy nao inclui o .prisma)
-WORKDIR /out
-RUN /out/node_modules/.bin/prisma generate --schema=/app/packages/database/prisma/schema.prisma || true
-WORKDIR /app
+RUN pnpm install --frozen-lockfile --filter @kairos/api... --filter @kairos/database --prod
 
 # ---------- Stage 3: runtime ----------
 FROM node:20-alpine AS runtime
@@ -48,10 +44,10 @@ ENV NODE_ENV=production
 ENV PORT=3001
 WORKDIR /app
 
-# Copia node_modules de produção + build
-COPY --from=build /out/node_modules ./node_modules
-COPY --from=build /out/dist ./dist
-COPY --from=build /out/package.json ./
+# Copia node_modules (com .prisma ja gerado) + build
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/apps/api/package.json ./
 
 # Cria usuário não-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
