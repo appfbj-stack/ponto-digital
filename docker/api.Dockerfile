@@ -35,9 +35,6 @@ RUN pnpm --filter @kairos/api build
 # Remove devDependencies pra reduzir tamanho
 RUN pnpm deploy --filter @kairos/api --prod /out
 
-# Copia o .prisma/client gerado para o /out (pnpm deploy nao copia)
-COPY --from=build /app/node_modules/.prisma /out/node_modules/.prisma
-
 # ---------- Stage 3: runtime ----------
 FROM node:20-alpine AS runtime
 RUN apk add --no-cache openssl dumb-init wget
@@ -49,6 +46,8 @@ WORKDIR /app
 COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /out/dist ./dist
 COPY --from=build /out/package.json ./
+# Copia .prisma/client gerado pelo `prisma generate` (pnpm deploy nao copia)
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 # Cria usuário não-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
