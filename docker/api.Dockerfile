@@ -24,8 +24,12 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 
-# Gera Prisma Client (com schema explícito, output em /app/node_modules/.prisma)
-RUN npx prisma@5.22.0 generate --schema=./packages/database/prisma/schema.prisma --output=./node_modules/.prisma/client
+# Gera Prisma Client (com schema explícito)
+RUN npx prisma@5.22.0 generate --schema=./packages/database/prisma/schema.prisma
+# Garante que o .prisma esteja em /app/node_modules/.prisma (local usado pelo @prisma/client)
+RUN mkdir -p /app/node_modules/.prisma && cp -r /app/packages/database/node_modules/.prisma/* /app/node_modules/.prisma/ 2>/dev/null || true
+# Mostra onde o .prisma foi gerado para debug
+RUN find /app -name ".prisma" -type d 2>/dev/null | head -5
 
 # Build NestJS
 RUN pnpm --filter @kairos/api build
