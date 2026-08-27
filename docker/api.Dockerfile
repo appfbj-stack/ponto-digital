@@ -47,7 +47,7 @@ COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /out/dist ./dist
 COPY --from=build /out/package.json ./
 # Copia .prisma/client gerado pelo `prisma generate` (pnpm deploy nao copia)
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/packages/database/node_modules/.prisma ./node_modules/.prisma
 
 # Cria usuário não-root
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
