@@ -35,6 +35,11 @@ RUN pnpm --filter @kairos/api build
 # Remove devDependencies pra reduzir tamanho
 RUN pnpm deploy --filter @kairos/api --prod /out
 
+# Regenerar Prisma Client no /out (pnpm deploy não copia o .prisma/client gerado)
+WORKDIR /out
+RUN npx prisma generate --schema=/app/packages/database/prisma/schema.prisma
+WORKDIR /app
+
 # ---------- Stage 3: runtime ----------
 FROM node:20-alpine AS runtime
 RUN apk add --no-cache openssl dumb-init wget
