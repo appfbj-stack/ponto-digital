@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@kairos/database": ["./packages/database/src/index.ts"],
+      "@kairos/database/*": ["./packages/database/src/*"],
+      "@kairos/billing": ["./packages/billing/dist/index.d.ts"],
+      "@kairos/billing/*": ["./packages/billing/dist/*"],
+      "@kairos/face": ["./packages/face/dist/index.d.ts"],
+      "@kairos/face/*": ["./packages/face/dist/*"],
+      "@kairos/ui": ["./packages/ui/src/index.ts"],
+      "@kairos/ui/*": ["./packages/ui/src/*"],
+      "@kairos/types": ["./packages/types/dist/index.d.ts"],
+      "@kairos/types/*": ["./packages/types/dist/*"],
+      "@kairos/timesheet": ["./packages/timesheet/dist/index.d.ts"],
+      "@kairos/timesheet/*": ["./packages/timesheet/dist/*"],
+      "@kairos/config": ["./packages/config/dist/index.d.ts"],
+      "@kairos/config/*": ["./packages/config/dist/*"],
+      "@kairos/utils": ["./packages/utils/dist/index.d.ts"],
+      "@kairos/utils/*": ["./packages/utils/dist/*"]
+    }
+  }
+}
