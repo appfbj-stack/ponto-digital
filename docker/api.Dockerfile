@@ -15,7 +15,7 @@ COPY apps/employee/package.json ./apps/employee/
 COPY apps/super-admin/package.json ./apps/super-admin/
 RUN pnpm install --frozen-lockfile
 COPY apps/api ./apps/api
-COPY tsconfig.base.json ./
+COPY tsconfig.base.json tsconfig.packages.json ./
 # Gera Prisma Client
 RUN npx prisma@5.22.0 generate --schema=./packages/database/prisma/schema.prisma
 # Compila os packages workspace (que tem src/.ts como main)

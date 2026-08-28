@@ -12,7 +12,6 @@
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
     "baseUrl": ".",
     "paths": {
       "@kairos/database": ["./packages/database/src/index.ts"],
