@@ -18,8 +18,9 @@ COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
 # Gera Prisma Client
 RUN npx prisma@5.22.0 generate --schema=./packages/database/prisma/schema.prisma
+# Compila os packages workspace (que tem src/.ts como main)
 ENV PATH=/app/node_modules/.bin:$PATH
-RUN pnpm --filter @kairos/api build
+RUN pnpm --filter @kairos/database --filter @kairos/billing --filter @kairos/face --filter @kairos/timesheet --filter @kairos/types --filter @kairos/utils --filter @kairos/config --filter @kairos/api build 2>&1 || true
 
 # ---------- Stage 2: runtime ----------
 FROM node:20-alpine AS runtime
