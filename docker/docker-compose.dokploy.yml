@@ -23,7 +23,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - DATABASE_URL=postgresql://kairos_user:${POSTGRES_PASSWORD}@kairos-shared-pg:5432/kairos_ponto_db
+      - DATABASE_URL=postgresql://kairos_ponto_user:${POSTGRES_PASSWORD}@kairos-shared-pg:5432/kairos_ponto_db
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - JWT_EXPIRES_IN=15m
