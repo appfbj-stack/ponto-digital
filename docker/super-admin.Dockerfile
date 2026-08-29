@@ -42,6 +42,8 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/.next/standalone /app
 COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/.next/static /app/apps/super-admin/.next/static
 COPY --from=build --chown=nextjs:nodejs /app/apps/super-admin/public /app/apps/super-admin/public
+# Copia .pnpm (necessario para resolver symlinks do standalone)
+COPY --from=build --chown=nextjs:nodejs /app/node_modules/.pnpm /app/node_modules/.pnpm
 
 USER nextjs
 EXPOSE 3000
