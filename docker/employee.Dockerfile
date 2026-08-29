@@ -42,8 +42,9 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=build --chown=nextjs:nodejs /app/apps/employee/.next/standalone /app
 COPY --from=build --chown=nextjs:nodejs /app/apps/employee/.next/static /app/apps/employee/.next/static
 COPY --from=build --chown=nextjs:nodejs /app/apps/employee/public /app/apps/employee/public
-# Copia .pnpm (necessario para resolver symlinks do standalone)
+# Copia .pnpm no local onde os symlinks do standalone esperam
 COPY --from=build --chown=nextjs:nodejs /app/node_modules/.pnpm /app/node_modules/.pnpm
+COPY --from=build --chown=nextjs:nodejs /app/node_modules/.pnpm /node_modules/.pnpm
 
 USER nextjs
 EXPOSE 3000
@@ -53,3 +54,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "node /app/server.js"]
+
