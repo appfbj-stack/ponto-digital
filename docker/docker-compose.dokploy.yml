@@ -18,8 +18,8 @@ services:
     image: kairos-ponto-api:latest
     container_name: kairos-ponto-api
     restart: unless-stopped
-    expose:
-      - "3001"
+    ports:
+      - "127.0.0.1:3021:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -56,8 +56,8 @@ services:
     image: kairos-ponto-web:latest
     container_name: kairos-ponto-web
     restart: unless-stopped
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3022:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -79,8 +79,8 @@ services:
     image: kairos-ponto-employee:latest
     container_name: kairos-ponto-employee
     restart: unless-stopped
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3023:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -102,8 +102,8 @@ services:
     image: kairos-ponto-super-admin:latest
     container_name: kairos-ponto-super-admin
     restart: unless-stopped
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3024:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
