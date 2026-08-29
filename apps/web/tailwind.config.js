@@ -7,6 +7,13 @@ module.exports = {
     './src/app/**/*.{ts,tsx}',
     '../../packages/ui/src/**/*.{ts,tsx}',
   ],
+  safelist: [
+    // Cores de icone do dashboard
+    { pattern: /^(bg|text|ring)-(indigo|emerald|rose|cyan|amber|violet|fuchsia|sky|slate)-(50|100|600)$/ },
+    // Brand gradient
+    { pattern: /^(bg|text)-brand-gradient/ },
+    'shadow-brand', 'shadow-brand-lg',
+  ],
   theme: {
     container: {
       center: true,
