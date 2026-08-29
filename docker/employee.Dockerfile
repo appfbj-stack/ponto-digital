@@ -50,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --quiet --spider http://localhost:3000/manifest.json || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "cd /app/apps/employee && node server.js"]
+CMD ["sh", "-c", "node /app/server.js"]
